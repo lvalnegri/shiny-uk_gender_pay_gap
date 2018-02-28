@@ -1,4 +1,4 @@
-## projects-uk_gender_pay_gap
+## UK Gender Pay Gap
 
 In 2017, the UK government introduced the [Gender pay reporting]() legislation that makes it statutory for organisations with 250 or more employees to report annually on how large the pay gap is between their male and female employees across the whole organisation. Some employer (mostly Civil Service) has decided to publish its findings even if it had less than 250 staff on payroll, as part of an initiative to improve transparency.
 
