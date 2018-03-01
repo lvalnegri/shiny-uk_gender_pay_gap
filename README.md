@@ -6,6 +6,6 @@ Every employer must publish the following figures:
   - mean and median gender pay gap in hourly pay
   - mean and median bonus gender pay gap
   - proportion of males and females receiving a bonus payment
-  - proportion of males and females in each pay *quartile*, meaning when divided into four equal groups ordered from lowest to highest pay.
+  - proportion of males and females in each pay *quartile*, meaning when divided into four equal groups ordered from lowest to highest pay: lower (0-25% pay band), lower middle (25-50%), upper middle (50-75%) and upper (75-100%).
 
 
