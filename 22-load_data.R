@@ -64,10 +64,11 @@ dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
 dts <- data.table( dbReadTable(dbc, 'dataset') )
 dbDisconnect(dbc)
 dts <- dts[is.na(x_lon)]
+gm_key <- readLines('key.txt')
 for(idx in 1:nrow(dts)){
     adr <- dts[idx, address]
     message('Geocoding company <', dts[idx, company], '>, ', idx, ' out of ', nrow(dts))
-    lnlt <- mp_geocode(adr, region = 'uk', key = 'AIzaSyDC3sMFvBRUELXhHClSLvfHNjLM2NYDtes')
+    lnlt <- mp_geocode(adr, region = 'uk', key = gm_key)
     lnlt <- mp_get_points(lnlt)
     lnlt <- unlist(lnlt[1]$pnt)
     dts[idx, `:=`(x_lon = lnlt[1], y_lat = lnlt[2])]
@@ -77,7 +78,7 @@ dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
 dbSendQuery(dbc, paste0('DELETE FROM dataset WHERE company IN ("', paste(dts[, company], collapse = '", "'), '")') )
 dbWriteTable(dbc, 'dataset', dts, append = TRUE, row.names = FALSE)
 dbDisconnect(dbc)
-    
+
 # clean & exit
 rm(list = ls())
 gc()
