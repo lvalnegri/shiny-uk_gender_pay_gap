@@ -56,6 +56,16 @@ strSQL = "
 "
 dbSendQuery(dbc, strSQL)
 
+### vars ------------------------------------------------------------------------------------------
+strSQL = "
+    CREATE TABLE vars (
+    	var_id CHAR(4) NOT NULL,
+    	name CHAR(25) NOT NULL,
+    	description CHAR(50) NOT NULL,
+    	PRIMARY KEY (var_id)
+    ) COLLATE='utf8_unicode_ci' ENGINE=MyISAM ROW_FORMAT=FIXED;
+"
+dbSendQuery(dbc, strSQL)
 
 # Close DB Connection, Clean & Exit ---------------------------------------------------------------
 dbDisconnect(dbc)
