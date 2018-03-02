@@ -24,3 +24,4 @@ vignettes/*.pdf
 *.knit.md
 .Rproj.user
 projects-uk_gender_pay_gap.Rproj
+key.txt
