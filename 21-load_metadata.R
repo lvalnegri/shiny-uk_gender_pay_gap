@@ -23,7 +23,8 @@ dbWriteTable(dbc, 'sics', sic, append = TRUE, row.names = FALSE)
 vars <- data.frame(
     'var_id' = c('DMH', 'DMdH', 'DMB', 'DMdB', 'MB', 'FB', 'MQ1', 'FQ1', 'MQ2', 'FQ2', 'MQ3', 'FQ3', 'MQ4', 'FQ4'),
     'name'   = c(
-        'DiffMeanHourlyPercent', 'DiffMedianHourlyPercent', 'DiffMeanBonusPercent', 'DiffMedianBonusPercent', 'MaleBonusPercent', 'FemaleBonusPercent',
+        'DiffMeanHourlyPercent', 'DiffMedianHourlyPercent', 'DiffMeanBonusPercent', 'DiffMedianBonusPercent', 
+        'MaleBonusPercent', 'FemaleBonusPercent',
         'MaleLowerQuartile', 'FemaleLowerQuartile', 'MaleLowerMiddleQuartile', 'FemaleLowerMiddleQuartile',
         'MaleUpperMiddleQuartile', 'FemaleUpperMiddleQuartile', 'MaleTopQuartile', 'FemaleTopQuartile'
     ),
