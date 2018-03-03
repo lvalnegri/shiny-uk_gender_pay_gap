@@ -34,15 +34,15 @@ vars <- data.frame(
         'Gender Bonus Pay Gap: mean averages',
         'Gender Bonus Pay Gap: median averages',
         'Proportion of men receiving bonuses',
-        'Proportion of men and women receiving bonuses',
-        'Male Lower Quartile',
-        'Feale Lower Quartile',
-        'Male Lower Middle Quartile',
-        'Female Lower Middle Quartile',
-        'Male Upper Middle Quartile',
-        'Female Upper Middle Quartile',
-        'Male Top Quartile',
-        'Female Top Quartile'
+        'Proportion of women receiving bonuses',
+        'Proportion of men in the Lower Quartile: 0-25%',
+        'Proportion of women in the Lower Quartile: 0-25%',
+        'Proportion of men in the Lower Middle Quartile: 25-50%',
+        'Proportion of women in the Lower Middle Quartile: 25-50%',
+        'Proportion of men in the Upper Middle Quartile: 50-75%',
+        'Proportion of women in the Upper Middle Quartile: 50-75%',
+        'Proportion of men in the Top Quartile: 75-100%',
+        'Proportion of women in the Female Top Quartile: 75-100%'
      )
  )
 
