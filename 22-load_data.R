@@ -13,9 +13,17 @@ dts <- fread(
     col.names = c('company', 'address', 'company_id', 'sic', 'DMH', 'DMdH', 'DMB', 'DMdB', 'MB', 'FB', 'MQ1', 'FQ1', 'MQ2', 'FQ2', 'MQ3', 'FQ3', 'MQ4', 'FQ4')
 )
 
+# clean and capitalize company names
+# proper <- function(x){
+#     s <- strsplit(x, ' ')[[1]]
+#     paste(toupper(substr(s, 1, 1)), substring(s, 2), sep = '', collapse = ' ')
+# }
+# dts[, company := proper( gsub('\\W', ' ', company) ) ]
+
 # clean company_id and sic
 dts[company_id == '', company_id := NA]
-dts[, sic := gsub('\r\n', '', trimws(sub('^1,(.*)', '\\1', sic)))][sic == '', sic := NA]
+dts[, sic := gsub('\r\n', '', trimws(sub('^1,(.*)', '\\1', sic)))]
+dts[sic == '', sic := NA]
 
 # find missing sic
 ms <- dts[is.na(sic), company_id]
@@ -36,6 +44,20 @@ for(m in ms){
     cntr <- cntr + 1
 }
 
+# recode 1 as 8411
+dts[sic == '1', sic := '8411']
+
+# create table with all sics connected to all company
+sc <- dts[!is.na(sic) & !is.na(company_id), .(rep(company_id, sapply(strsplit(sic, split = ','), length)), unlist(strsplit(sic, split = ',')) )]
+setnames(sc, c('company_id', 'sic'))
+dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
+dbSendQuery(dbc, "TRUNCATE TABLE sics_companies")
+dbWriteTable(dbc, 'sics_companies', sc, append = TRUE, row.names = FALSE)
+dbDisconnect(dbc)
+
+# recode sic as 4-chars, keeping only first if not unique
+dts[, sic := substr(sic, 1, 4)]
+
 # extract and clean postcode
 dts[, postcode := trimws(sub('^.*,(.*)$', '\\1', address))]
 dts[, postcode := gsub(' ', '', postcode)]
@@ -55,7 +77,6 @@ dts <- oa[dts, on = 'postcode']
 
 # save data to database
 dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
-# dbSendQuery(dbc, "TRUNCATE TABLE dataset")
 dbWriteTable(dbc, 'dataset', dts, append = TRUE, row.names = FALSE)
 dbDisconnect(dbc)
 
