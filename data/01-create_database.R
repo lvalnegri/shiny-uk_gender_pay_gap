@@ -17,14 +17,21 @@ dbc = dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
 ### dataset ---------------------------------------------------------------------------------------
 strSQL = "
     CREATE TABLE dataset (
-    	company_id CHAR(8) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
+    	datefield SMALLINT(4) UNSIGNED NOT NULL,
     	company CHAR(150) NOT NULL COLLATE 'utf8_unicode_ci',
-    	sic TEXT NOT NULL COLLATE 'utf8_unicode_ci',
-    	address VARCHAR(150) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
+    	company_id CHAR(8) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
+    	company_name CHAR(150) NOT NULL COLLATE 'utf8_unicode_ci',
+    	sic MEDIUMINT(5) UNSIGNED NULL DEFAULT NULL,
+    	address VARCHAR(150) NOT NULL COLLATE 'utf8_unicode_ci',
     	x_lon DECIMAL(9,7) NULL DEFAULT NULL,
     	y_lat DECIMAL(9,7) UNSIGNED NULL DEFAULT NULL,
     	postcode CHAR(7) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
     	OA CHAR(9) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
+    	LAD CHAR(9) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
+    	RGN CHAR(9) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
+    	WARD CHAR(9) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
+    	PCON CHAR(9) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
+    	PCA CHAR(9) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
     	DMH DECIMAL(5,2) NOT NULL,
     	DMdH DECIMAL(5,2) NOT NULL,
     	DMB DECIMAL(7,3) NOT NULL,
@@ -40,8 +47,14 @@ strSQL = "
     	MQ4 DECIMAL(5,2) UNSIGNED NOT NULL,
     	FQ4 DECIMAL(5,2) UNSIGNED NOT NULL,
     	PRIMARY KEY (company),
+    	INDEX datefield (datefield),
     	INDEX postcode (postcode),
-    	INDEX OA (OA)
+    	INDEX OA (OA),
+    	INDEX LAD (LAD),
+    	INDEX RGN (RGN),
+    	INDEX WARD (WARD),
+    	INDEX PCON (PCON),
+    	INDEX PCA (PCA)
     ) COLLATE='utf8_unicode_ci' ENGINE=MyISAM ROW_FORMAT=FIXED;
 "
 dbSendQuery(dbc, strSQL)
@@ -50,8 +63,10 @@ dbSendQuery(dbc, strSQL)
 strSQL = "
     CREATE TABLE sics (
     	sic MEDIUMINT(5) UNSIGNED NOT NULL,
-    	description VARCHAR(200) NOT NULL COLLATE 'utf8_unicode_ci',
-    	PRIMARY KEY (sic)
+    	description VARCHAR(160) NOT NULL COLLATE 'utf8_unicode_ci',
+    	section CHAR(125) NOT NULL COLLATE 'utf8_unicode_ci',
+    	PRIMARY KEY (sic),
+    	INDEX section (section)
     ) COLLATE='utf8_unicode_ci' ENGINE=MyISAM ROW_FORMAT=FIXED;
 "
 dbSendQuery(dbc, strSQL)
