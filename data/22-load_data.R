@@ -3,22 +3,49 @@
 ####################################
 
 # load packages
-pkg <- c('data.table', 'mapsapi', 'RMySQL', 'rvest')
+pkg <- c('data.table', 'fst', 'mapsapi', 'RMySQL', 'rvest')
 invisible(lapply(pkg, require, char = TRUE))
+
+# set datefield
+datefield <- 2017
+
+# save copy of recoded data: company_name, sic, x_lon, y_lat, postcode
+dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
+dbSendQuery(dbc, "DROP TABLE IF EXISTS dataset_copy")
+dbSendQuery(dbc, paste("
+    CREATE table dataset_copy  
+        SELECT company, company_name, company_id, sic, x_lon, y_lat, postcode 
+        FROM dataset
+        WHERE datefield =", datefield, "
+        ORDER BY company_name
+"))
+dbDisconnect(dbc)
 
 # download data file
 dts <- fread(
-    'https://gender-pay-gap.service.gov.uk/Viewing/download-data?year=2017',
+    paste0('https://gender-pay-gap.service.gov.uk/Viewing/download-data?year=', datefield),
     select = c(1:18),
-    col.names = c('company', 'address', 'company_id', 'sic', 'DMH', 'DMdH', 'DMB', 'DMdB', 'MB', 'FB', 'MQ1', 'FQ1', 'MQ2', 'FQ2', 'MQ3', 'FQ3', 'MQ4', 'FQ4')
+    col.names = c(
+        'company', 'address', 'company_id', 'sic', 
+        'DMH', 'DMdH', 'DMB', 'DMdB', 'MB', 'FB', 'MQ1', 'FQ1', 'MQ2', 'FQ2', 'MQ3', 'FQ3', 'MQ4', 'FQ4'
+    )
 )
 
-# clean and capitalize company names
-# proper <- function(x){
-#     s <- strsplit(x, ' ')[[1]]
-#     paste(toupper(substr(s, 1, 1)), substring(s, 2), sep = '', collapse = ' ')
-# }
-# dts[, company := proper( gsub('\\W', ' ', company) ) ]
+# add datefield (=year)
+dts[, datefield := datefield]
+
+# clean and capitalize company names, fix 
+dts[, company_name := trimws(gsub('\\W', ' ', company)) ]
+dts[, company_name := trimws(company) ]
+dts[, company_name := gsub('(?<=\\b)([a-z])', '\\U\\1', tolower(company_name), perl = TRUE)]
+dts[, company_name := gsub('Ltd|Ltd.|Limited', 'LTD', company_name)]
+dts[, company_name := gsub('Llc', 'LLC', company_name)]
+dts[, company_name := gsub('Plc|P.L.C.', 'PLC', company_name)]
+dts[, company_name := gsub('  ', ' ', company_name)]
+dts[, company_name := gsub('Uk|(UK)|U.K.', 'UK', company_name)]
+dts[, company_name := gsub('Gb', 'GB', company_name)]
+dts[, company_name := gsub('Nhs', 'NHS', company_name)]
+dts[, company_name := gsub('(The)', '', company_name)]
 
 # clean company_id and sic
 dts[company_id == '', company_id := NA]
@@ -47,7 +74,7 @@ for(m in ms){
 # recode 1 as 8411
 dts[sic == '1', sic := '8411']
 
-# create table with all sics connected to all company
+# create table with all sics connected to all companies
 sc <- dts[!is.na(sic) & !is.na(company_id), .(rep(company_id, sapply(strsplit(sic, split = ','), length)), unlist(strsplit(sic, split = ',')) )]
 setnames(sc, c('company_id', 'sic'))
 dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
@@ -69,16 +96,31 @@ dts <- dts[!is.na(postcode),
     ))
 ]
 
+# save data to database
+dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
+dbSendQuery(dbc, "TRUNCATE TABLE dataset")
+dbWriteTable(dbc, 'dataset', dts, append = TRUE, row.names = FALSE)
+dbDisconnect(dbc)
+
+# update dataset table with info saved earlier
+strSQL <- paste("
+    UPDATE dataset dt 
+        JOIN dataset_copy dtc ON dtc.company = dt.company
+    SET 
+	 	dt.company_name = dtc.company_name, dt.company_id = dtc.company_id, 
+		dt.x_lon = dtc.x_lon,  dt.y_lat = dtc.y_lat, 
+		dt.postcode = dtc.postcode
+    WHERE dt.datefield =", datefield
+)
+dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
+dbSendQuery(dbc, strSQL)
+dbDisconnect(dbc)
+
 # add output area. NOTE ===> Require newest update of postcodes from ONS 
 dbc = dbConnect(MySQL(), group = 'dataOps', dbname = 'geography_uk')
 oa <- data.table(dbGetQuery(dbc, "SELECT postcode, OA FROM postcodes"))
 dbDisconnect(dbc)
 dts <- oa[dts, on = 'postcode']
-
-# save data to database
-dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
-dbWriteTable(dbc, 'dataset', dts, append = TRUE, row.names = FALSE)
-dbDisconnect(dbc)
 
 # geocode
 dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
@@ -100,7 +142,42 @@ dbSendQuery(dbc, paste0('DELETE FROM dataset WHERE company IN ("', paste(dts[, c
 dbWriteTable(dbc, 'dataset', dts, append = TRUE, row.names = FALSE)
 dbDisconnect(dbc)
 
-# clean & exit
+# add higher level areas codes
+strSQL <- "
+    UPDATE dataset dt 
+        JOIN geography_uk.lookups lk ON lk.OA = dt.OA
+    SET dt.LAD = lk.LAD, dt.CTY = lk.CTY, dt.RGN = lk.RGN, dt.PCN = lk.PCON, dt.WRD = lk.WARD, dt.PCA = lk.PCA
+"
+dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
+dbSendQuery(dbc, strSQL)
+dbDisconnect(dbc)
+
+# delete coordinates outside UK bounding box: lng1 = 1.8, lat1 = 49.9, lng2 = -8.3, lat2 = 59.0
+strSQL <- "
+    UPDATE dataset
+    SET x_lon = NULL, y_lat = NULL
+    WHERE x_lon > 1.8  OR x_lon < -8.3 OR y_lat > 59.0 OR y_lat < 49.9
+"
+dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
+dbSendQuery(dbc, strSQL)
+
+# substitute null coordinates with postcode centroid
+# strSQL <- "
+#     UPDATE dataset dt 
+#         JOIN geography_uk.postcode pc ON pc.postcode = dt.postcode
+#     SET dt.x_lon = pc.x_lon, dt.y_lat = pc.y_lat
+#     WHERE x_lon IS NULL
+# "
+# dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
+# dbSendQuery(dbc, strSQL)
+
+# convert to fst for quick reading by shiny
+dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
+dts <- data.table( dbReadTable(dbc, 'dataset') )
+dbDisconnect(dbc)
+write_fst(dts, 'dataset.fst', 100)
+
+# clean environment & exit
 rm(list = ls())
 gc()
 
