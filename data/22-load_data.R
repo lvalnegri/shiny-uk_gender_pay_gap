@@ -45,7 +45,7 @@ dts[, company_name := gsub('  ', ' ', company_name)]
 dts[, company_name := gsub('Uk|(UK)|U.K.', 'UK', company_name)]
 dts[, company_name := gsub('Gb', 'GB', company_name)]
 dts[, company_name := gsub('Nhs', 'NHS', company_name)]
-dts[, company_name := gsub('(The)', '', company_name)]
+dts[, company_name := gsub('(The)|"', '', company_name)]
 
 # clean company_id and sic
 dts[company_id == '', company_id := NA]
@@ -71,8 +71,8 @@ for(m in ms){
     cntr <- cntr + 1
 }
 
-# recode 1 as 8411
-dts[sic == '1', sic := '8411']
+# recode 1 as 84110
+dts[sic == '1', sic := '84110']
 
 # create table with all sics connected to all companies
 sc <- dts[!is.na(sic) & !is.na(company_id), .(rep(company_id, sapply(strsplit(sic, split = ','), length)), unlist(strsplit(sic, split = ',')) )]
@@ -81,9 +81,6 @@ dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
 dbSendQuery(dbc, "TRUNCATE TABLE sics_companies")
 dbWriteTable(dbc, 'sics_companies', sc, append = TRUE, row.names = FALSE)
 dbDisconnect(dbc)
-
-# recode sic as 4-chars, keeping only first if not unique
-dts[, sic := substr(sic, 1, 4)]
 
 # extract and clean postcode
 dts[, postcode := trimws(sub('^.*,(.*)$', '\\1', address))]
@@ -116,18 +113,12 @@ dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
 dbSendQuery(dbc, strSQL)
 dbDisconnect(dbc)
 
-# add output area. NOTE ===> Require newest update of postcodes from ONS 
-dbc = dbConnect(MySQL(), group = 'dataOps', dbname = 'geography_uk')
-oa <- data.table(dbGetQuery(dbc, "SELECT postcode, OA FROM postcodes"))
-dbDisconnect(dbc)
-dts <- oa[dts, on = 'postcode']
-
 # geocode
 dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
 dts <- data.table( dbReadTable(dbc, 'dataset') )
 dbDisconnect(dbc)
 dts <- dts[is.na(x_lon)]
-gm_key <- readLines('key.txt')
+gm_key <- readLines('data/key.txt')
 for(idx in 1:nrow(dts)){
     adr <- dts[idx, address]
     message('Geocoding company <', dts[idx, company], '>, ', idx, ' out of ', nrow(dts))
@@ -143,12 +134,18 @@ dbWriteTable(dbc, 'dataset', dts, append = TRUE, row.names = FALSE)
 dbDisconnect(dbc)
 
 # add higher level areas codes
+dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
+strSQL <- "
+    UPDATE dataset dt 
+        JOIN geography_uk.postcodes pc ON pc.postcode = dt.postcode
+    SET dt.OA = pc.OA
+"
+dbSendQuery(dbc, strSQL)
 strSQL <- "
     UPDATE dataset dt 
         JOIN geography_uk.lookups lk ON lk.OA = dt.OA
-    SET dt.LAD = lk.LAD, dt.CTY = lk.CTY, dt.RGN = lk.RGN, dt.PCN = lk.PCON, dt.WRD = lk.WARD, dt.PCA = lk.PCA
+    SET dt.LAD = lk.LAD, dt.RGN = lk.RGN, dt.PCON = lk.PCON, dt.WARD = lk.WARD, dt.PCA = lk.PCA
 "
-dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
 dbSendQuery(dbc, strSQL)
 dbDisconnect(dbc)
 
@@ -171,11 +168,12 @@ dbSendQuery(dbc, strSQL)
 # dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
 # dbSendQuery(dbc, strSQL)
 
-# convert to fst for quick reading by shiny
+# save as csv, and convert to fst for quick reading by shiny
 dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
 dts <- data.table( dbReadTable(dbc, 'dataset') )
 dbDisconnect(dbc)
-write_fst(dts, 'dataset.fst', 100)
+write.csv(dts, 'data/dataset.csv', row.names = FALSE)
+write_fst(dts, 'data/dataset.fst', 100)
 
 # clean environment & exit
 rm(list = ls())
