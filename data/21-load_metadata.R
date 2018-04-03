@@ -10,10 +10,17 @@ invisible(lapply(pkg, require, char = TRUE))
 dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
 
 # download SIC codes
-sic <- fread(
-    'https://www.gov.uk/government/uploads/system/uploads/attachment_data/file/527619/SIC07_CH_condensed_list_en.csv',
-    col.names = c('sic', 'description')
-)
+# sic <- fread(
+#     'https://www.gov.uk/government/uploads/system/uploads/attachment_data/file/527619/SIC07_CH_condensed_list_en.csv',
+#     col.names = c('sic', 'description')
+# )
+# sic <- read_html('http://resources.companieshouse.gov.uk/sic/') %>%
+#             html_nodes('td , strong') %>% 
+#             html_text() %>% 
+#             trimws() %>% 
+#             as.matrix(ncol = 2) %>% 
+#             as.data.table()
+sic <- fread('data/sic.csv')
 
 # save sics to database
 dbSendQuery(dbc, "TRUNCATE TABLE sics")
@@ -52,6 +59,17 @@ dbWriteTable(dbc, 'vars', vars, append = TRUE, row.names = FALSE)
 
 # close connection to database
 dbDisconnect(dbc)
+
+# copy locations from geography database and save it in fst format
+dbc = dbConnect(MySQL(), group = 'dataOps', dbname = 'geography_uk')
+strSQL <- "
+    SELECT location_id, name, type_id, parent_id
+    FROM locations 
+    WHERE type_id IN ('LAD', 'RGN', 'PCON', 'WARD', 'PCA')
+"
+locations <- data.table(dbGetQuery(dbc, strSQL))
+dbDisconnect(dbc)
+write_fst(locations, 'data/locations.fst', 100)
 
 # clean & exit
 rm(list = ls())
