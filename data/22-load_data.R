@@ -14,7 +14,7 @@ dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
 dbSendQuery(dbc, "DROP TABLE IF EXISTS dataset_copy")
 dbSendQuery(dbc, paste("
     CREATE table dataset_copy  
-        SELECT company, company_name, company_id, sic, x_lon, y_lat, postcode 
+        SELECT company, company_name, company_id, size, sic, x_lon, y_lat, postcode
         FROM dataset
         WHERE datefield =", datefield, "
         ORDER BY company_name
@@ -24,18 +24,22 @@ dbDisconnect(dbc)
 # download data file
 dts <- fread(
     paste0('https://gender-pay-gap.service.gov.uk/Viewing/download-data?year=', datefield),
-    select = c(1:18),
+    select = c(1:18, 21),
     col.names = c(
         'company', 'address', 'company_id', 'sic', 
-        'DMH', 'DMdH', 'DMB', 'DMdB', 'MB', 'FB', 'MQ1', 'FQ1', 'MQ2', 'FQ2', 'MQ3', 'FQ3', 'MQ4', 'FQ4'
+        'DMH', 'DMdH', 'DMB', 'DMdB', 'MB', 'FB', 'MQ1', 'FQ1', 'MQ2', 'FQ2', 'MQ3', 'FQ3', 'MQ4', 'FQ4',
+        'size'
     )
 )
 
 # add datefield (=year)
 dts[, datefield := datefield]
 
+# add NA to size
+dts[size == 'Not Provided', size := NA]
+
 # clean and capitalize company names, fix 
-dts[, company_name := trimws(gsub('\\W', ' ', company)) ]
+# dts[, company_name := trimws(gsub('\\W', ' ', company)) ]
 dts[, company_name := trimws(company) ]
 dts[, company_name := gsub('(?<=\\b)([a-z])', '\\U\\1', tolower(company_name), perl = TRUE)]
 dts[, company_name := gsub('Ltd|Ltd.|Limited', 'LTD', company_name)]
@@ -71,7 +75,7 @@ for(m in ms){
     cntr <- cntr + 1
 }
 
-# recode 1 as 84110
+# recode single 1 as 84110
 dts[sic == '1', sic := '84110']
 
 # create table with all sics connected to all companies
@@ -178,4 +182,5 @@ write_fst(dts, 'data/dataset.fst', 100)
 # clean environment & exit
 rm(list = ls())
 gc()
+
 
