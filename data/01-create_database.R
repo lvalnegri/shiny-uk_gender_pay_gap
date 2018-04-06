@@ -14,13 +14,13 @@ dbDisconnect(dbc)
 # Connect to database -----------------------------------------------------------------------------
 dbc = dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
 
-### dataset ---------------------------------------------------------------------------------------
+### companies ---------------------------------------------------------------------------------------
 strSQL = "
-    CREATE TABLE dataset (
-    	datefield SMALLINT(4) UNSIGNED NOT NULL,
+    CREATE TABLE companies (
     	company CHAR(150) NOT NULL COLLATE 'utf8_unicode_ci',
     	company_id CHAR(8) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
     	company_name CHAR(150) NOT NULL COLLATE 'utf8_unicode_ci',
+    	size CHAR(15) NOT NULL COLLATE 'utf8_unicode_ci',
     	sic MEDIUMINT(5) UNSIGNED NULL DEFAULT NULL,
     	address VARCHAR(150) NOT NULL COLLATE 'utf8_unicode_ci',
     	x_lon DECIMAL(9,7) NULL DEFAULT NULL,
@@ -32,22 +32,9 @@ strSQL = "
     	WARD CHAR(9) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
     	PCON CHAR(9) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
     	PCA CHAR(9) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
-    	DMH DECIMAL(5,2) NOT NULL,
-    	DMdH DECIMAL(5,2) NOT NULL,
-    	DMB DECIMAL(7,3) NOT NULL,
-    	DMdB DECIMAL(7,3) NOT NULL,
-    	MB DECIMAL(5,2) UNSIGNED NOT NULL,
-    	FB DECIMAL(5,2) UNSIGNED NOT NULL,
-    	MQ1 DECIMAL(5,2) UNSIGNED NOT NULL,
-    	FQ1 DECIMAL(5,2) UNSIGNED NOT NULL,
-    	MQ2 DECIMAL(5,2) UNSIGNED NOT NULL,
-    	FQ2 DECIMAL(5,2) UNSIGNED NOT NULL,
-    	MQ3 DECIMAL(5,2) UNSIGNED NOT NULL,
-    	FQ3 DECIMAL(5,2) UNSIGNED NOT NULL,
-    	MQ4 DECIMAL(5,2) UNSIGNED NOT NULL,
-    	FQ4 DECIMAL(5,2) UNSIGNED NOT NULL,
     	PRIMARY KEY (company),
-    	INDEX datefield (datefield),
+    	INDEX size (size),
+    	INDEX sic (sic),
     	INDEX postcode (postcode),
     	INDEX OA (OA),
     	INDEX LAD (LAD),
@@ -67,6 +54,44 @@ strSQL = "
     	section CHAR(125) NOT NULL COLLATE 'utf8_unicode_ci',
     	PRIMARY KEY (sic),
     	INDEX section (section)
+    ) COLLATE='utf8_unicode_ci' ENGINE=MyISAM ROW_FORMAT=FIXED;
+"
+dbSendQuery(dbc, strSQL)
+
+### sics <-> companies ----------------------------------------------------------------------------
+strSQL = "
+    CREATE TABLE sics_companies (
+    	company_id CHAR(8) NOT NULL COLLATE 'utf8_unicode_ci',
+    	sic MEDIUMINT(5) UNSIGNED NOT NULL COLLATE 'utf8_unicode_ci',
+    	INDEX company_id (company_id),
+    	INDEX sic (sic),
+    	PRIMARY KEY (company_id, sic)
+    ) COLLATE='utf8_unicode_ci' ENGINE=MyISAM ROW_FORMAT=FIXED;
+"
+dbSendQuery(dbc, strSQL)
+
+### dataset ---------------------------------------------------------------------------------------
+strSQL = "
+    CREATE TABLE dataset (
+    	datefield SMALLINT(4) UNSIGNED NOT NULL,
+    	company CHAR(150) NOT NULL COLLATE 'utf8_unicode_ci',
+    	DMH DECIMAL(5,2) NOT NULL,
+    	DMdH DECIMAL(5,2) NOT NULL,
+    	DMB DECIMAL(7,3) NOT NULL,
+    	DMdB DECIMAL(7,3) NOT NULL,
+    	MB DECIMAL(5,2) UNSIGNED NOT NULL,
+    	FB DECIMAL(5,2) UNSIGNED NOT NULL,
+    	MQ1 DECIMAL(5,2) UNSIGNED NOT NULL,
+    	FQ1 DECIMAL(5,2) UNSIGNED NOT NULL,
+    	MQ2 DECIMAL(5,2) UNSIGNED NOT NULL,
+    	FQ2 DECIMAL(5,2) UNSIGNED NOT NULL,
+    	MQ3 DECIMAL(5,2) UNSIGNED NOT NULL,
+    	FQ3 DECIMAL(5,2) UNSIGNED NOT NULL,
+    	MQ4 DECIMAL(5,2) UNSIGNED NOT NULL,
+    	FQ4 DECIMAL(5,2) UNSIGNED NOT NULL,
+    	PRIMARY KEY (datefield, company),
+    	INDEX datefield (datefield),
+    	INDEX company (company)
     ) COLLATE='utf8_unicode_ci' ENGINE=MyISAM ROW_FORMAT=FIXED;
 "
 dbSendQuery(dbc, strSQL)
