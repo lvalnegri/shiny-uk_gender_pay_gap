@@ -22,7 +22,10 @@ strSQL = "
     	company_name CHAR(150) NOT NULL COLLATE 'utf8_unicode_ci',
     	size CHAR(15) NOT NULL COLLATE 'utf8_unicode_ci',
     	sic MEDIUMINT(5) UNSIGNED NULL DEFAULT NULL,
+    	has_sic TINYINT(1) UNSIGNED NOT NULL DEFAULT '1',
     	address VARCHAR(150) NOT NULL COLLATE 'utf8_unicode_ci',
+    	is_UK TINYINT(1) UNSIGNED NOT NULL DEFAULT '1',
+    	has_coord TINYINT(1) UNSIGNED NOT NULL DEFAULT '1',
     	x_lon DECIMAL(9,7) NULL DEFAULT NULL,
     	y_lat DECIMAL(9,7) UNSIGNED NULL DEFAULT NULL,
     	postcode CHAR(7) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
@@ -32,6 +35,9 @@ strSQL = "
     	WARD CHAR(9) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
     	PCON CHAR(9) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
     	PCA CHAR(9) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
+    	is_ftse100 TINYINT(1) UNSIGNED NOT NULL DEFAULT '0',
+    	is_top TINYINT(1) UNSIGNED NOT NULL DEFAULT '0',
+    	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     	PRIMARY KEY (company),
     	INDEX size (size),
     	INDEX sic (sic),
@@ -41,7 +47,12 @@ strSQL = "
     	INDEX RGN (RGN),
     	INDEX WARD (WARD),
     	INDEX PCON (PCON),
-    	INDEX PCA (PCA)
+    	INDEX PCA (PCA),
+    	INDEX is_UK (is_UK),
+    	INDEX has_coord (has_coord),
+    	INDEX has_sic (has_sic),
+    	INDEX is_top (is_top),
+    	INDEX is_ftse100 (is_ftse100)
     ) COLLATE='utf8_unicode_ci' ENGINE=MyISAM ROW_FORMAT=FIXED;
 "
 dbSendQuery(dbc, strSQL)
