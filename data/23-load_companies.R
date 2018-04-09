@@ -70,49 +70,53 @@ dbDisconnect(dbc)
 
 # find missing sic
 dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
-dts <- data.table( dbGetQuery(dbc, "SELECT * FROM companies WHERE is_UK AND sic IS NULL AND company_id IS NOT NULL") )
+dts <- data.table( dbGetQuery(dbc, "SELECT * FROM companies WHERE is_UK AND sic IS NULL AND has_sic AND company_id IS NOT NULL") )
 dbDisconnect(dbc)
-ms <- dts[is.na(sic), company_id]
-cntr <- 1
-for(m in ms){
-    message('Processing company <', m, '>, ', cntr, ' out of ', length(ms))
-    tryCatch(
-        {
-            sc <- read_html(paste0('https://beta.companieshouse.gov.uk/company/', m)) %>%
-                        html_nodes('#sic0') %>% 
-                        html_text() %>% 
-                        sub('(.*)-.*', '\\1', .) %>% 
-                        trimws()
-            if(length(sc) > 0) dts[company_id == m, sic := sc]
-        }, 
-        error = function(e){ cat('Company Not Found!\n') }
-    )
-    cntr <- cntr + 1
+if(nrow(dts) > 0){
+    ms <- dts[is.na(sic), company_id]
+    cntr <- 1
+    for(m in ms){
+        message('Processing company <', m, '>, ', cntr, ' out of ', length(ms))
+        tryCatch(
+            {
+                sc <- read_html(paste0('https://beta.companieshouse.gov.uk/company/', m)) %>%
+                            html_nodes('#sic0') %>% 
+                            html_text() %>% 
+                            sub('(.*)-.*', '\\1', .) %>% 
+                            trimws()
+                if(length(sc) > 0) dts[company_id == m, sic := sc]
+            }, 
+            error = function(e){ cat('Company Not Found!\n') }
+        )
+        cntr <- cntr + 1
+    }
+    dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
+    dbSendQuery(dbc, paste0('UPDATE companies SET has_sic = 0 WHERE company IN ("', paste(dts[is.na(sic), company], collapse = '", "'), '")') )
+    dbSendQuery(dbc, paste0('DELETE FROM companies WHERE company IN ("', paste(dts[!is.na(sic), company], collapse = '", "'), '")') )
+    dbWriteTable(dbc, 'companies', dts, append = TRUE, row.names = FALSE)
+    dbDisconnect(dbc)
 }
-dts <- dts[!is.na(sic)]
-dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
-dbSendQuery(dbc, paste0('DELETE FROM companies WHERE company IN ("', paste(dts[, company], collapse = '", "'), '")') )
-dbWriteTable(dbc, 'companies', dts, append = TRUE, row.names = FALSE)
-dbDisconnect(dbc)
 
 # geocode
 dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
 dts <- data.table( dbGetQuery(dbc, "SELECT * FROM companies WHERE is_UK AND has_coord AND x_lon IS NULL ORDER BY address") )
 dbDisconnect(dbc)
-gm_key <- readLines('data/key.txt')
-for(idx in 1:nrow(dts)){
-    adr <- dts[idx, address]
-    message('Geocoding company <', dts[idx, company], '>, ', idx, ' out of ', nrow(dts))
-    lnlt <- mp_geocode(adr, region = 'uk', key = gm_key)
-    lnlt <- mp_get_points(lnlt)
-    lnlt <- unlist(lnlt[1]$pnt)
-    dts[idx, `:=`(x_lon = lnlt[1], y_lat = lnlt[2])]
+if(nrow(dts) > 0){
+    gm_key <- readLines('data/key.txt')
+    for(idx in 1:nrow(dts)){
+        adr <- dts[idx, address]
+        message('Geocoding company <', dts[idx, company], '>, ', idx, ' out of ', nrow(dts))
+        lnlt <- mp_geocode(adr, region = 'uk', key = gm_key)
+        lnlt <- mp_get_points(lnlt)
+        lnlt <- unlist(lnlt[1]$pnt)
+        dts[idx, `:=`(x_lon = lnlt[1], y_lat = lnlt[2])]
+    }
+    dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
+    dbSendQuery(dbc, paste0('UPDATE companies SET has_coord = 0 WHERE company IN ("', paste(dts[is.na(x_lon), company], collapse = '", "'), '")') )
+    dbSendQuery(dbc, paste0('DELETE FROM companies WHERE company IN ("', paste(dts[!is.na(x_lon), company], collapse = '", "'), '")') )
+    dbWriteTable(dbc, 'companies', dts, append = TRUE, row.names = FALSE)
+    dbDisconnect(dbc)
 }
-dts <- dts[!is.na(x_lon)]
-dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
-dbSendQuery(dbc, paste0('DELETE FROM companies WHERE company IN ("', paste(dts[, company], collapse = '", "'), '")') )
-dbWriteTable(dbc, 'companies', dts, append = TRUE, row.names = FALSE)
-dbDisconnect(dbc)
 
 # add higher level areas codes
 dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
@@ -157,7 +161,7 @@ dts <- data.table( dbReadTable(dbc, 'companies') )
 dbDisconnect(dbc)
 write.csv(dts, 'data/companies.csv', row.names = FALSE)
 
-# add sics and sectors name
+# add sics and sections names
 dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
 sics <- data.table( dbReadTable(dbc, 'sics') )
 dbDisconnect(dbc)
