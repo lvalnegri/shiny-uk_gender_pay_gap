@@ -7,7 +7,7 @@ pkg <- c('data.table', 'fst', 'mapsapi', 'RMySQL', 'rvest')
 invisible(lapply(pkg, require, char = TRUE))
 
 # set datefield (=year)
-dtf <- 2018
+dtf <- 2017
 
 # download data file
 dts <- fread(
@@ -21,16 +21,17 @@ dts[company_id == '', company_id := NA]
 
 # add company name
 # dts[, company_name := trimws(gsub('\\W', ' ', company)) ]
-dts[, company_name := trimws(company) ]
+dts[, company_name := trimws(gsub('  ', ' ', company)) ]
 dts[, company_name := gsub('(?<=\\b)([a-z])', '\\U\\1', tolower(company_name), perl = TRUE)]
 dts[, company_name := gsub('Ltd|Ltd.|Limited', 'LTD', company_name)]
 dts[, company_name := gsub('Llc', 'LLC', company_name)]
 dts[, company_name := gsub('Plc|P.L.C.', 'PLC', company_name)]
-dts[, company_name := gsub('  ', ' ', company_name)]
 dts[, company_name := gsub('Uk|(UK)|U.K.', 'UK', company_name)]
 dts[, company_name := gsub('Gb', 'GB', company_name)]
 dts[, company_name := gsub('Nhs', 'NHS', company_name)]
-dts[, company_name := gsub('(The)|"', '', company_name)]
+dts[, company_name := gsub('\\(The\\)|"', '', company_name)]
+dts[, company_name := gsub('N H S', 'NHS', company_name)]
+dts[, company_name := trimws(company_name) ]
 
 # clean size
 dts[size == 'Not Provided', size := NA]
