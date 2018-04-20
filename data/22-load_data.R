@@ -29,7 +29,9 @@ dts[DMH >= 100 | DMdH >= 100, `:=`(DMH = NA, DMdH = NA, DMB = NA, DMdB = NA)]
 dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
 dbSendQuery(dbc, paste("DELETE FROM dataset WHERE datefield =", dtf))
 dbWriteTable(dbc, 'dataset', dts, append = TRUE, row.names = FALSE)
+dts <- data.table(dbReadTable(dbc, 'dataset'))
 dbDisconnect(dbc)
+dts <- dts[order(-datefield, company)]
 write.csv(dts, 'data/dataset.csv', row.names = FALSE)
 write_fst(dts, 'data/dataset.fst', 100)
 
