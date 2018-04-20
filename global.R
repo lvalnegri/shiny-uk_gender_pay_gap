@@ -18,10 +18,13 @@ options(spinner.color = '#e5001a', spinner.size = 1, spinner.type = 4)
 
 #===== LOAD DATA ----------------------------------------------------------------------------------------------------------------
 dts <- read.fst('data/dataset.fst', as.data.table = TRUE)
+cmp <- read.fst('data/companies.fst', as.data.table = TRUE)
+loc <- read.fst('data/locations.fst', as.data.table = TRUE)
 dbc <- dbConnect(MySQL(), group = 'dataOps', dbname = 'uk_gender_pay_gap')
 vars <- data.table( dbReadTable(dbc, 'vars') )
-sics <- data.table( dbReadTable(dbc, 'sics') )
+last_updated <- dbGetQuery(dbc, "SELECT MAX(updated_at) FROM companies")
 dbDisconnect(dbc)
+last_updated <- as.Date(as.character(last_updated), '%Y-%m-%d')
 
 #===== RECODE DATA --------------------------------------------------------------------------------------------------------------
 
@@ -43,8 +46,13 @@ gg.to.ggiraph <- function(p, sel.type = 'single', gg.width = 0.8){
 }
 
 #===== VARIABLES/LABELS ----------------------------------------------------------------------------------------------------------------
+
+# 
+
+
 # Default color/palette 
 pal.default <- c('col' = 'steelblue3', 'cat' = 'Dark2', 'seq' = 'YlGnBu', 'div' = 'RdBu', 'na' = 'grey62')
+
 # List of palettes to be used with ColourBrewer package:  
 lst.palette <- list(
     'SEQUENTIAL' = c( # ordinal data where (usually) low is less important and high is more important
@@ -62,8 +70,10 @@ lst.palette <- list(
         'Set1' = 'Set1', 'Set2' = 'Set2', 'Set3' = 'Set3'
     )
 )
+
 # list of labels for download buttons
 btndwn.text <- c('Save Dataset as CSV', 'Save Chart as PNG', 'Save Static Map as PNG', 'Save Interactive Map as HTML', 'Save Table as CSV')
+
 # list of options for charts
 point.shapes <- c('circle' = 21, 'square' = 22, 'diamond' = 23, 'triangle up' = 24, 'triangle down' = 25)
 line.types <- c('dashed', 'dotted', 'solid', 'dotdash', 'longdash', 'twodash')
@@ -87,6 +97,7 @@ lbl.format <- function(y, type, is.pct = FALSE){
 }
 
 #===== STYLES ----------------------------------------------------------------------------------------------------------------
+
 # add text at the right of the upper navbar
 navbarPageWithText <- function(..., text) {
     navbar <- navbarPage(...)
@@ -94,6 +105,7 @@ navbarPageWithText <- function(..., text) {
     navbar[[3]][[1]]$children[[1]] <- htmltools::tagAppendChild( navbar[[3]][[1]]$children[[1]], textEl)
     navbar
 }
+
 # return correct spacing for axis labels rotation
 lbl.plt.rotation = function(angle, position = 'x'){
     positions = list(x = 0, y = 90, top = 180, right = 270)
@@ -102,6 +114,7 @@ lbl.plt.rotation = function(angle, position = 'x'){
     vjust = 0.5 * (1 + cos(rads))
     element_text(angle = angle, vjust = vjust, hjust = hjust)
 }
+
 # global style for ggplot charts
 my.ggtheme <- function(g, 
                     xaxis.draw = FALSE, yaxis.draw = FALSE, axis.draw = FALSE, ticks.draw = FALSE, axis.colour = 'black', axis.size = 0.1,
