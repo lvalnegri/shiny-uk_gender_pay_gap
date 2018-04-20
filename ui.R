@@ -7,13 +7,13 @@ shinyUI(fluidPage(
     includeCSS('datamaps.css'),
     tags$head(
         tags$script(src="datamaps.js"),
-        tags$link(rel="shortcut icon", href="favicon.ico")
+        tags$link(rel="shortcut icon", href="favicon.png")
     ),
     
     navbarPageWithText(
         header = '', # source(file.path("ui", "ui_hdr.R"),  local = TRUE)$value,
         title = tags$span(HTML(paste0(
-            '<img src="datamaps-logotype.png" class="datamaps-logo">',
+            '<img src="logo.png" class="logo">',
             '<b style="font-size:160%;"> UK Gender Pay Gap </b>'
         ))), 
         windowTitle = 'UK Gender Pay Gap', 
@@ -30,9 +30,10 @@ shinyUI(fluidPage(
     	source(file.path("ui", "ui_mps.R"),  local = TRUE)$value,
     
     	### HELP / ABOUT / CREDITS (hlp) ---------------------------------------------------------------------------------
-        source(file.path("ui", "ui_hlp.R"),  local = TRUE)$value,
+        source(file.path("ui", "ui_about.R"),  local = TRUE)$value,
     
-        text = '@2018 datamaps.co.uk'
+    	### LAST UPDATED AT --------------------------------------------------------------------------------------------------------
+        text = paste('Last updated:', format(last_updated, '%d %b %Y') )
         
     ),
     
