@@ -7,7 +7,7 @@ pkg <- c('data.table', 'fst', 'mapsapi', 'RMySQL', 'rvest')
 invisible(lapply(pkg, require, char = TRUE))
 
 # set datefield (=year)
-dtf <- 2017
+dtf <- 2018
 
 # download data file
 dts <- fread(
@@ -133,6 +133,7 @@ strSQL <- "
     SET dt.LAD = lk.LAD, dt.RGN = lk.RGN, dt.PCON = lk.PCON, dt.WARD = lk.WARD, dt.PCA = lk.PCA
 "
 dbSendQuery(dbc, strSQL)
+dbSendQuery(dbc, "UPDATE companies SET CTRY = LEFT(RGN, 1)")
 dbDisconnect(dbc)
 
 # delete coordinates outside UK bounding box: lng1 = 1.8, lat1 = 49.9, lng2 = -8.3, lat2 = 59.0
@@ -168,6 +169,9 @@ sics <- data.table( dbReadTable(dbc, 'sics') )
 dbDisconnect(dbc)
 dts <- sics[dts, on = 'sic'][, sic := NULL]
 setnames(dts, 'description', 'sic')
+
+# add locations names
+
 
 # convert cat vars to factors, then save as fst for quick reading by shiny
 dts[, sic := factor(sic, levels = sort( unique(sic) )) ]
